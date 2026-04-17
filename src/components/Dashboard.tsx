@@ -3,10 +3,11 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   LineChart, Line, BarChart, Bar, Cell 
 } from 'recharts';
-import { TrendingUp, FileText, ChevronRight, ChevronDown } from 'lucide-react';
+import { TrendingUp, FileText, ChevronRight, ChevronDown, Download } from 'lucide-react';
 import { ExportData, CompanyStats, MarketStats, PartnerStats } from '../types';
 import { formatCurrency, formatNumber, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import * as XLSX from 'xlsx';
 
 interface DashboardProps {
   data: ExportData[];
@@ -222,19 +223,57 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     return { totalValue, totalShipments, sortedCompanies, sortedMarkets, timeData, hsCodeData };
   }, [data, companySearch, marketSearch]);
 
+  const exportRankings = () => {
+    const wb = XLSX.utils.book_new();
+
+    // Companies Sheet
+    const companyData = stats.sortedCompanies.map(c => ({
+      'Tên Công ty': c.name,
+      'Mã số thuế': c.taxId,
+      'Tổng trị giá USD': c.totalValueUsd,
+      'Tổng số lượng': c.totalQuantity,
+      'Số tờ khai': c.shipmentCount,
+      'Số thị trường': c.markets.size
+    }));
+    const wsComp = XLSX.utils.json_to_sheet(companyData);
+    XLSX.utils.book_append_sheet(wb, wsComp, "Xếp hạng Công ty");
+
+    // Markets Sheet
+    const marketData = stats.sortedMarkets.map(m => ({
+      'Thị trường': m.country,
+      'Tổng trị giá USD': m.totalValueUsd,
+      'Tổng số lượng': m.totalQuantity,
+      'Số tờ khai': m.shipmentCount,
+      'Số doanh nghiệp xuất khẩu': m.exporters.size
+    }));
+    const wsMark = XLSX.utils.json_to_sheet(marketData);
+    XLSX.utils.book_append_sheet(wb, wsMark, "Xếp hạng Thị trường");
+
+    XLSX.writeFile(wb, `Bao_cao_tong_hop_${new Date().getTime()}.xlsx`);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 gap-4">
-        {[
-          { label: 'Tổng trị giá xuất khẩu (USD)', value: formatCurrency(stats.totalValue), icon: TrendingUp },
-          { label: 'Tổng số tờ khai khai báo', value: formatNumber(stats.totalShipments), icon: FileText },
-        ].map((metric, i) => (
-          <div key={i} className="high-density-card flex flex-col justify-center min-h-[90px]">
-            <p className="stat-label">{metric.label}</p>
-            <h4 className="stat-value">{metric.value}</h4>
-          </div>
-        ))}
+      <div className="flex justify-between items-end">
+        <div className="grid grid-cols-2 gap-4 flex-1">
+          {[
+            { label: 'Tổng trị giá xuất khẩu (USD)', value: formatCurrency(stats.totalValue), icon: TrendingUp },
+            { label: 'Tổng số tờ khai khai báo', value: formatNumber(stats.totalShipments), icon: FileText },
+          ].map((metric, i) => (
+            <div key={i} className="high-density-card flex flex-col justify-center min-h-[90px]">
+              <p className="stat-label">{metric.label}</p>
+              <h4 className="stat-value">{metric.value}</h4>
+            </div>
+          ))}
+        </div>
+        <button 
+          onClick={exportRankings}
+          className="ml-4 mb-0.5 flex items-center space-x-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded shadow-md transition-all font-bold text-[12px] h-[90px]"
+        >
+          <Download className="w-5 h-5" />
+          <span>XUẤT BÁO CÁO TỔNG HỢP</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

@@ -1,7 +1,8 @@
 import React from 'react';
 import { ExportData } from '../types';
 import { formatCurrency, formatNumber } from '../lib/utils';
-import { Search } from 'lucide-react';
+import { Search, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface DataTableProps {
   data: ExportData[];
@@ -19,22 +20,54 @@ export const DataTable: React.FC<DataTableProps> = ({ data }) => {
     );
   }, [data, searchTerm]);
 
+  const handleExport = () => {
+    const exportData = filteredData.map(item => ({
+      'Ngày': `${item.day}/${item.month}/${item.year}`,
+      'Số Tờ Khai': item.declarationNumber,
+      'MST Xuất Khẩu': item.exporterTaxId,
+      'Công ty Xuất Khẩu': item.exporterName,
+      'Thị trường': item.importCountry,
+      'Nhà Nhập Khẩu': item.importerName,
+      'Mã HS': item.hsCode,
+      'Mô tả hàng hóa': item.productDescription,
+      'Số lượng': item.quantity,
+      'Đơn vị': item.unit,
+      'Trị giá USD': item.valueUsd,
+      'Loại hình': item.businessType,
+      'Cửa khẩu': item.customsOffice
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Chi tiết dữ liệu");
+    XLSX.writeFile(wb, `Du_lieu_xuat_khau_${new Date().getTime()}.xlsx`);
+  };
+
   return (
-    <div className="high-density-card !p-0 overflow-hidden">
-      <div className="p-4 border-b border-border-line flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#fafafa]">
+    <div className="high-density-card !p-0 overflow-hidden shadow-sm">
+      <div className="p-4 border-b border-border-line flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50">
         <div>
-          <h3 className="pane-title text-ink">Danh sách giao dịch chi tiết</h3>
-          <p className="text-[10px] text-subtle-gray uppercase mt-1">Hiển thị {filteredData.length} bản ghi</p>
+          <h3 className="pane-title text-indigo-900">Chi tiết dữ liệu giao dịch</h3>
+          <p className="text-[10px] text-slate-500 font-medium uppercase mt-1">Found {filteredData.length} records in analysis</p>
         </div>
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-subtle-gray" />
-          <input
-            type="text"
-            placeholder="Tìm kiếm..."
-            className="pl-8 pr-4 py-1 bg-white border border-border-line rounded text-[11px] focus:outline-none focus:ring-1 focus:ring-accent-blue transition-all w-full md:w-64"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search data..."
+              className="pl-8 pr-4 py-1.5 bg-white border border-slate-200 rounded text-[11px] font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all w-full md:w-64"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={handleExport}
+            className="flex items-center space-x-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[11px] font-bold transition-all shadow-sm"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>XUẤT EXCEL</span>
+          </button>
         </div>
       </div>
       
