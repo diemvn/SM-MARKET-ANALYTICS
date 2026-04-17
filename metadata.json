@@ -1,0 +1,6 @@
+{
+  "name": "Export Market Insight",
+  "description": "Phân tích thị trường xuất khẩu, xếp hạng công ty và thị trường dựa trên dữ liệu thông quan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

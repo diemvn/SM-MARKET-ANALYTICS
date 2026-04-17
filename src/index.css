@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  
+  --color-bg: #f5f7fa;
+  --color-ink: #1e293b;
+  --color-border-line: #e2e8f0;
+  --color-accent-blue: #0f172a;
+  --color-subtle-gray: #64748b;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-ink font-sans antialiased sm:text-[13px] text-[12px] tracking-tight;
+  }
+}
+
+@layer components {
+  .high-density-card {
+    @apply bg-white border border-border-line p-4 shadow-sm rounded-sm;
+  }
+  
+  .stat-label {
+    @apply text-[9px] uppercase font-semibold text-subtle-gray mb-1 tracking-widest;
+  }
+  
+  .stat-value {
+    @apply font-mono text-xl font-bold text-accent-blue;
+  }
+
+  .pane-title {
+    @apply text-[11px] font-bold uppercase tracking-widest text-accent-blue/80;
+  }
+
+  .dense-table {
+    @apply border-collapse w-full border border-border-line bg-white shadow-sm;
+  }
+
+  .dense-table th {
+    @apply bg-slate-50 p-2 border border-border-line text-subtle-gray uppercase text-[9px] text-left font-bold tracking-wider;
+  }
+
+  .dense-table td {
+    @apply p-2 border border-slate-100 text-[11px] leading-relaxed;
+  }
+}
