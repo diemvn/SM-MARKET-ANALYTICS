@@ -17,10 +17,11 @@ const CollapsibleRow: React.FC<{
   subtitle?: string;
   quantity: number; 
   valueUsd: number; 
+  shipmentCount: number;
   children: PartnerStats[];
   topHsCodes?: PartnerStats[];
   isMarket?: boolean;
-}> = ({ title, subtitle, quantity, valueUsd, children, topHsCodes, isMarket }) => {
+}> = ({ title, subtitle, quantity, valueUsd, shipmentCount, children, topHsCodes, isMarket }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -38,13 +39,14 @@ const CollapsibleRow: React.FC<{
             {subtitle && <span className="text-[9px] text-subtle-gray font-mono">{subtitle}</span>}
           </div>
         </td>
-        <td className="text-right font-bold font-mono">{formatNumber(quantity)}</td>
-        <td className="text-right font-bold font-mono text-accent-blue">{formatCurrency(valueUsd)}</td>
+        <td className="text-right font-bold font-mono text-[11px]">{formatNumber(quantity)}</td>
+        <td className="text-right font-bold font-mono text-[11px] text-accent-blue">{formatCurrency(valueUsd)}</td>
+        <td className="text-right font-bold font-mono text-[11px] text-slate-500">{formatNumber(shipmentCount)}</td>
       </tr>
       <AnimatePresence>
         {isOpen && (
           <tr>
-            <td colSpan={3} className="p-0 border-none bg-gray-50/50">
+            <td colSpan={4} className="p-0 border-none bg-gray-50/50">
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
@@ -54,7 +56,7 @@ const CollapsibleRow: React.FC<{
                 {/* Secondary Table: Markets/Partners */}
                 <div className="space-y-1">
                   <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-4">
-                    {isMarket ? 'CÁC NHÀ NHẬP KHẨU CHÍNH' : 'CÁC THỊ TRƯỜNG CHÍNH'}
+                    {isMarket ? `CÁC NHÀ NHẬP KHẨU CHÍNH (${children.length})` : `CÁC THỊ TRƯỜNG CHÍNH (${children.length})`}
                   </h4>
                   <table className="w-full dense-table ml-4 w-[calc(100%-1rem)]">
                     <tbody className="bg-white">
@@ -63,6 +65,7 @@ const CollapsibleRow: React.FC<{
                           <td className="text-[10px] text-slate-700 pl-4">{child.name}</td>
                           <td className="text-right text-[10px] font-mono text-slate-500">{formatNumber(child.totalQuantity)}</td>
                           <td className="text-right text-[10px] font-mono text-slate-500">{formatCurrency(child.totalValueUsd)}</td>
+                          <td className="text-right text-[10px] font-mono text-slate-400">{formatNumber(child.shipmentCount)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -73,7 +76,7 @@ const CollapsibleRow: React.FC<{
                 {!isMarket && topHsCodes && topHsCodes.length > 0 && (
                   <div className="space-y-1">
                     <h4 className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest px-4">
-                      TOP 5 MẶT HÀNG (HS CODE)
+                      TOP 5 MẶT HÀNG (HS CODE) - TỔNG {topHsCodes.length} LOẠI
                     </h4>
                     <table className="w-full dense-table ml-4 w-[calc(100%-1rem)]">
                       <tbody className="bg-white">
@@ -82,6 +85,7 @@ const CollapsibleRow: React.FC<{
                             <td className="text-[10px] font-mono text-indigo-700 pl-4">{hs.name}</td>
                             <td className="text-right text-[10px] font-mono text-slate-500">{formatNumber(hs.totalQuantity)}</td>
                             <td className="text-right text-[10px] font-mono text-slate-500">{formatCurrency(hs.totalValueUsd)}</td>
+                            <td className="text-right text-[10px] font-mono text-slate-400">{formatNumber(hs.shipmentCount)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -237,7 +241,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
         {/* Top Companies Drill-down */}
         <div className="high-density-card flex flex-col !p-0">
           <div className="pane-header flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border-b border-border-line bg-slate-50 gap-2">
-            <h3 className="pane-title text-[11px] text-slate-900">XẾP HẠNG CÔNG TY XUẤT KHẨU</h3>
+            <h3 className="pane-title text-[11px] text-slate-900">
+              XẾP HẠNG CÔNG TY XUẤT KHẨU ({stats.sortedCompanies.length})
+            </h3>
             <div className="relative w-full sm:w-auto">
               <input 
                 type="text" 
@@ -255,6 +261,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                   <th className="w-1/2">CÔNG TY XUẤT KHẨU</th>
                   <th className="text-right">SỐ LƯỢNG</th>
                   <th className="text-right">TRỊ GIÁ USD</th>
+                  <th className="text-right">SỐ TỜ KHAI</th>
                 </tr>
               </thead>
               <tbody>
@@ -265,6 +272,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                     subtitle={company.taxId}
                     quantity={company.totalQuantity}
                     valueUsd={company.totalValueUsd}
+                    shipmentCount={company.shipmentCount}
                     children={company.partners}
                     topHsCodes={company.topHsCodes}
                   />
@@ -277,7 +285,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
         {/* Top Markets Drill-down */}
         <div className="high-density-card flex flex-col !p-0">
           <div className="pane-header flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border-b border-border-line bg-slate-50 gap-2">
-            <h3 className="pane-title text-[11px] text-slate-900">XẾP HẠNG THỊ TRƯỜNG NHẬP KHẨU</h3>
+            <h3 className="pane-title text-[11px] text-slate-900">
+              XẾP HẠNG THỊ TRƯỜNG NHẬP KHẨU ({stats.sortedMarkets.length})
+            </h3>
             <div className="relative w-full sm:w-auto">
               <input 
                 type="text" 
@@ -295,6 +305,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                   <th className="w-1/2">THỊ TRƯỜNG NHẬP KHẨU</th>
                   <th className="text-right">SỐ LƯỢNG</th>
                   <th className="text-right">TRỊ GIÁ USD</th>
+                  <th className="text-right">SỐ TỜ KHAI</th>
                 </tr>
               </thead>
               <tbody>
@@ -304,6 +315,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                     title={market.country}
                     quantity={market.totalQuantity}
                     valueUsd={market.totalValueUsd}
+                    shipmentCount={market.shipmentCount}
                     children={market.importers}
                     isMarket
                   />
