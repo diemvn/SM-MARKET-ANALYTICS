@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  LineChart, Line, BarChart, Bar, Cell 
+  LineChart, Line, BarChart, Bar, Cell, PieChart, Pie, Legend, AreaChart, Area
 } from 'recharts';
 import { TrendingUp, FileText, ChevronRight, ChevronDown, Download } from 'lucide-react';
 import { ExportData, CompanyStats, MarketStats, PartnerStats } from '../types';
@@ -102,6 +102,11 @@ const CollapsibleRow: React.FC<{
   );
 };
 
+const CHART_COLORS = [
+  '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', 
+  '#10b981', '#06b6d4', '#14b8a6', '#3b82f6', '#4f46e5'
+];
+
 export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   const [companySearch, setCompanySearch] = useState('');
   const [marketSearch, setMarketSearch] = useState('');
@@ -113,7 +118,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     // Aggregation logic
     const companyMap = new Map<string, { base: CompanyStats, partners: Map<string, PartnerStats>, hsCodes: Map<string, PartnerStats> }>();
     const marketMap = new Map<string, { base: MarketStats, importers: Map<string, PartnerStats> }>();
-    const timeSeriesMap = new Map<string, number>();
     const hsCodeMap = new Map<string, number>();
 
     data.forEach(item => {
@@ -185,10 +189,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       mPart.totalQuantity += item.quantity || 0;
       mPart.shipmentCount += 1;
 
-      // Time series
-      const timeKey = `${item.year}-${String(item.month).padStart(2, '0')}`;
-      timeSeriesMap.set(timeKey, (timeSeriesMap.get(timeKey) || 0) + (item.valueUsd || 0));
-
       // HS Code aggregation
       const hsKey = item.hsCode;
       hsCodeMap.set(hsKey, (hsCodeMap.get(hsKey) || 0) + (item.valueUsd || 0));
@@ -211,16 +211,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       .filter(m => !marketSearch || m.country.toLowerCase().includes(marketSearch.toLowerCase()))
       .sort((a, b) => b.totalValueUsd - a.totalValueUsd);
 
-    const timeData = Array.from(timeSeriesMap.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([name, value]) => ({ name, value }));
-
     const hsCodeData = Array.from(hsCodeMap.entries())
       .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10);
+      .sort((a, b) => b.value - a.value);
 
-    return { totalValue, totalShipments, sortedCompanies, sortedMarkets, timeData, hsCodeData };
+    const top10HsCodes = hsCodeData.slice(0, 10);
+
+    // Market Share Data (Pie Chart)
+    const top5Markets = sortedMarkets.slice(0, 5);
+    const otherMarketsValue = sortedMarkets.slice(5).reduce((sum, m) => sum + m.totalValueUsd, 0);
+    const marketShareData = [
+      ...top5Markets.map(m => ({ name: m.country, value: m.totalValueUsd })),
+      { name: 'Khác', value: otherMarketsValue }
+    ];
+
+    return { 
+      totalValue, 
+      totalShipments, 
+      sortedCompanies, 
+      sortedMarkets, 
+      hsCodeData: top10HsCodes,
+      marketShareData
+    };
   }, [data, companySearch, marketSearch]);
 
   const exportRankings = () => {
@@ -365,19 +377,48 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
         </div>
       </div>
 
-      {/* Analytics Chart */}
+      {/* Analytics Charts - Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Market Share Donut Chart */}
         <div className="high-density-card !p-6">
-          <h3 className="pane-title mb-6 border-b border-border-line pb-2">BIẾN ĐỘNG KIM NGẠCH THEO THỜI GIAN</h3>
-          <div className="h-[250px] w-full">
+          <h3 className="pane-title mb-6 border-b border-border-line pb-2 font-bold text-slate-900 uppercase tracking-tight">PHÂN BỔ THỊ TRƯỜNG NHẬP KHẨU</h3>
+          <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats.timeData}>
+              <PieChart>
+                <Pie
+                  data={stats.marketShareData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {stats.marketShareData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ fontSize: '11px', borderRadius: '8px', border: 'none' }}
+                  formatter={(val: number) => [formatCurrency(val), 'Trị giá']}
+                />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="high-density-card !p-6">
+          <h3 className="pane-title mb-6 border-b border-border-line pb-2 font-bold text-slate-900 uppercase tracking-tight">TOP 10 MÃ HS CODE THEO TRỊ GIÁ</h3>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.hsCodeData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cfcfcf" />
                 <XAxis 
                   dataKey="name" 
                   axisLine={{ stroke: '#cfcfcf' }} 
                   tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#1a1a1a' }}
+                  tick={{ fontSize: 9, fill: '#1a1a1a' }}
                 />
                 <YAxis 
                   axisLine={{ stroke: '#cfcfcf' }} 
@@ -388,54 +429,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                 <Tooltip 
                   contentStyle={{ fontSize: '11px', border: '1px solid #cfcfcf', backgroundColor: '#fff' }}
                   formatter={(val: number) => [formatCurrency(val), 'Trị giá']}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#6366f1" 
-                  strokeWidth={2.5} 
-                  dot={{ r: 3, fill: '#6366f1' }} 
-                  activeDot={{ r: 5, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="high-density-card !p-6">
-          <h3 className="pane-title mb-6 border-b border-border-line pb-2">TOP 10 MÃ HS CODE THEO TRỊ GIÁ</h3>
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.hsCodeData} layout="vertical" margin={{ left: 10, right: 30 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#cfcfcf" />
-                <XAxis 
-                  type="number"
-                  axisLine={{ stroke: '#cfcfcf' }} 
-                  tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#1a1a1a' }}
-                  tickFormatter={(val) => `$${(val / 1000000).toFixed(1)}M`}
-                />
-                <YAxis 
-                  dataKey="name" 
-                  type="category"
-                  axisLine={{ stroke: '#cfcfcf' }} 
-                  tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#1a1a1a' }}
-                  width={60}
-                />
-                <Tooltip 
-                  contentStyle={{ fontSize: '11px', border: '1px solid #cfcfcf', backgroundColor: '#fff' }}
-                  formatter={(val: number) => [formatCurrency(val), 'Trị giá']}
                   cursor={{ fill: '#f5f5f5' }}
                 />
                 <Bar 
                   dataKey="value" 
                   fill="#6366f1" 
-                  radius={[0, 4, 4, 0]}
-                  barSize={12}
+                  radius={[4, 4, 0, 0]}
+                  barSize={30}
                 >
                   {stats.hsCodeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index === 0 ? '#6366f1' : '#818cf8'} fillOpacity={1 - (index * 0.08)} />
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Bar>
               </BarChart>
