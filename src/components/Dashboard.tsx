@@ -258,7 +258,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                 </tr>
               </thead>
               <tbody>
-                {stats.sortedCompanies.slice(0, 50).map((company, i) => (
+                {stats.sortedCompanies.map((company, i) => (
                   <CollapsibleRow 
                     key={i}
                     title={company.name}
@@ -298,7 +298,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                 </tr>
               </thead>
               <tbody>
-                {stats.sortedMarkets.slice(0, 50).map((market, i) => (
+                {stats.sortedMarkets.map((market, i) => (
                   <CollapsibleRow 
                     key={i}
                     title={market.country}
