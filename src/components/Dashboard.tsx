@@ -476,46 +476,130 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     const wb = XLSX.utils.book_new();
 
     // Companies Sheet
-    const companyData = stats.sortedCompanies.map(c => ({
-      'Tên Công ty': c.name,
-      'Mã số thuế': c.taxId,
-      'Tổng trị giá USD': c.totalValueUsd,
-      'Tổng số lượng': c.totalQuantity,
-      'Số tờ khai': c.shipmentCount,
-      'Số thị trường': c.markets.size
-    }));
-    const wsComp = XLSX.utils.json_to_sheet(companyData);
+    const companyDataRows: any[] = [];
+    stats.sortedCompanies.forEach(c => {
+      // Header for company
+      companyDataRows.push({
+        'PHÂN LOẠI': 'CÔNG TY',
+        'TÊN/DANH MỤC': c.name,
+        'MÃ SỐ THUẾ': c.taxId,
+        'TRỊ GIÁ USD': c.totalValueUsd,
+        'TỔNG SỐ LƯỢNG': c.totalQuantity,
+        'SỐ TỜ KHAI': c.shipmentCount,
+        'GHI CHÚ': `Xuất khẩu tới ${c.markets.size} thị trường`
+      });
+
+      // Markets of this company
+      c.partners.forEach(p => {
+        companyDataRows.push({
+          'PHÂN LOẠI': '    - Thị trường',
+          'TÊN/DANH MỤC': p.name,
+          'TRỊ GIÁ USD': p.totalValueUsd,
+          'TỔNG SỐ LƯỢNG': p.totalQuantity,
+          'SỐ TỜ KHAI': p.shipmentCount
+        });
+      });
+
+      // Products of this company
+      (c.topProducts || []).forEach(p => {
+        companyDataRows.push({
+          'PHÂN LOẠI': '    - Sản phẩm',
+          'TÊN/DANH MỤC': p.name,
+          'TRỊ GIÁ USD': p.totalValueUsd,
+          'TỔNG SỐ LƯỢNG': p.totalQuantity,
+          'SỐ TỜ KHAI': p.shipmentCount
+        });
+      });
+      // Separator
+      companyDataRows.push({});
+    });
+    const wsComp = XLSX.utils.json_to_sheet(companyDataRows);
     XLSX.utils.book_append_sheet(wb, wsComp, "Xếp hạng Công ty");
 
     // Markets Sheet
-    const marketData = stats.sortedMarkets.map(m => ({
-      'Thị trường': m.country,
-      'Tổng trị giá USD': m.totalValueUsd,
-      'Tổng số lượng': m.totalQuantity,
-      'Số tờ khai': m.shipmentCount,
-      'Số doanh nghiệp xuất khẩu': m.exporters.size
-    }));
-    const wsMark = XLSX.utils.json_to_sheet(marketData);
+    const marketDataRows: any[] = [];
+    stats.sortedMarkets.forEach(m => {
+      marketDataRows.push({
+        'PHÂN LOẠI': 'THỊ TRƯỜNG',
+        'TÊN/DANH MỤC': m.country,
+        'TRỊ GIÁ USD': m.totalValueUsd,
+        'TỔNG SỐ LƯỢNG': m.totalQuantity,
+        'SỐ TỜ KHAI': m.shipmentCount,
+        'GHI CHÚ': `Có ${m.exporters.size} doanh nghiệp xuất khẩu`
+      });
+
+      // Importers in this market
+      m.importers.forEach(p => {
+        marketDataRows.push({
+          'PHÂN LOẠI': '    - Nhà nhập khẩu',
+          'TÊN/DANH MỤC': p.name,
+          'TRỊ GIÁ USD': p.totalValueUsd,
+          'TỔNG SỐ LƯỢNG': p.totalQuantity,
+          'SỐ TỜ KHAI': p.shipmentCount
+        });
+      });
+
+      // Products in this market
+      (m.topProducts || []).forEach(p => {
+        marketDataRows.push({
+          'PHÂN LOẠI': '    - Sản phẩm',
+          'TÊN/DANH MỤC': p.name,
+          'TRỊ GIÁ USD': p.totalValueUsd,
+          'TỔNG SỐ LƯỢNG': p.totalQuantity,
+          'SỐ TỜ KHAI': p.shipmentCount
+        });
+      });
+      marketDataRows.push({});
+    });
+    const wsMark = XLSX.utils.json_to_sheet(marketDataRows);
     XLSX.utils.book_append_sheet(wb, wsMark, "Xếp hạng Thị trường");
 
     // Product Ranking Sheet
-    const productData = stats.sortedProducts.map(p => ({
-      'Tên Sản phẩm': p.name,
-      'Tổng trị giá USD': p.totalValueUsd,
-      'Tổng số lượng': p.totalQuantity,
-      'Số tờ khai': p.shipmentCount
-    }));
-    const wsProd = XLSX.utils.json_to_sheet(productData);
+    const productDataRows: any[] = [];
+    stats.sortedProducts.forEach(p => {
+      productDataRows.push({
+        'PHÂN LOẠI': 'SẢN PHẨM',
+        'TÊN/DANH MỤC': p.name,
+        'TRỊ GIÁ USD': p.totalValueUsd,
+        'TỔNG SỐ LƯỢNG': p.totalQuantity,
+        'SỐ TỜ KHAI': p.shipmentCount
+      });
+      p.exporters.forEach(e => {
+        productDataRows.push({
+          'PHÂN LOẠI': '    - Cty xuất khẩu',
+          'TÊN/DANH MỤC': e.name,
+          'TRỊ GIÁ USD': e.totalValueUsd,
+          'TỔNG SỐ LƯỢNG': e.totalQuantity,
+          'SỐ TỜ KHAI': e.shipmentCount
+        });
+      });
+      productDataRows.push({});
+    });
+    const wsProd = XLSX.utils.json_to_sheet(productDataRows);
     XLSX.utils.book_append_sheet(wb, wsProd, "Xếp hạng Sản phẩm");
 
     // Packaging Ranking Sheet
-    const packageData = stats.sortedPackages.map(p => ({
-      'Quy cách đóng gói': p.name,
-      'Tổng trị giá USD': p.totalValueUsd,
-      'Tổng số lượng': p.totalQuantity,
-      'Số tờ khai': p.shipmentCount
-    }));
-    const wsPkg = XLSX.utils.json_to_sheet(packageData);
+    const packageDataRows: any[] = [];
+    stats.sortedPackages.forEach(p => {
+      packageDataRows.push({
+        'PHÂN LOẠI': 'QUY CÁCH',
+        'TÊN/DANH MỤC': p.name,
+        'TRỊ GIÁ USD': p.totalValueUsd,
+        'TỔNG SỐ LƯỢNG': p.totalQuantity,
+        'SỐ TỜ KHAI': p.shipmentCount
+      });
+      p.exporters.forEach(e => {
+        packageDataRows.push({
+          'PHÂN LOẠI': '    - Cty xuất khẩu',
+          'TÊN/DANH MỤC': e.name,
+          'TRỊ GIÁ USD': e.totalValueUsd,
+          'TỔNG SỐ LƯỢNG': e.totalQuantity,
+          'SỐ TỜ KHAI': e.shipmentCount
+        });
+      });
+      packageDataRows.push({});
+    });
+    const wsPkg = XLSX.utils.json_to_sheet(packageDataRows);
     XLSX.utils.book_append_sheet(wb, wsPkg, "Xếp hạng Đóng gói");
 
     // Detailed Data Sheet
