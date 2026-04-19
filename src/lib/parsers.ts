@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { ExportData } from '../types';
+import { extractProductName, extractPackageSpec } from './productExtractor';
 
 const HEADER_MAP: Record<string, keyof ExportData> = {
   'Năm': 'year',
@@ -28,7 +29,9 @@ const HEADER_MAP: Record<string, keyof ExportData> = {
   'Tên loại hình': 'businessType',
   'Tên nước xuất khẩu': 'exportCountry',
   'Tên nước nhập khẩu': 'importCountry',
-  'Số tờ khai': 'declarationNumber'
+  'Số tờ khai': 'declarationNumber',
+  'Tên sản phẩm': 'productName',
+  'Quy cách đóng gói': 'packageSpec'
 };
 
 export async function parseFile(file: File): Promise<ExportData[]> {
@@ -50,10 +53,21 @@ export async function parseFile(file: File): Promise<ExportData[]> {
               if (['year', 'month', 'day', 'exportTax', 'quantity', 'priceForeign', 'priceUsd', 'valueUsd', 'exchangeRateVnd'].includes(mappedKey as string)) {
                 item[mappedKey as string] = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : (value as any);
               } else {
-                item[mappedKey as string] = String(value);
+                item[mappedKey as string] = String(value).trim();
               }
             }
           });
+          
+          // Use extracted values ONLY if not already provided in the file
+          if (item.productDescription) {
+            if (!item.productName || item.productName === 'undefined') {
+              item.productName = extractProductName(item.productDescription);
+            }
+            if (!item.packageSpec || item.packageSpec === 'undefined') {
+              item.packageSpec = extractPackageSpec(item.productDescription);
+            }
+          }
+          
           return item as ExportData;
         });
 

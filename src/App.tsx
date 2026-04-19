@@ -21,6 +21,8 @@ export default function App() {
   const [filterYear, setFilterYear] = useState<string>('all');
   const [filterMonth, setFilterMonth] = useState<string>('all');
   const [filterHsCode, setFilterHsCode] = useState<string>('all');
+  const [filterProduct, setFilterProduct] = useState<string>('all');
+  const [filterPackage, setFilterPackage] = useState<string>('all');
 
   useEffect(() => {
     setIsLoaded(true);
@@ -37,19 +39,23 @@ export default function App() {
       setFilterYear('all');
       setFilterMonth('all');
       setFilterHsCode('all');
+      setFilterProduct('all');
+      setFilterPackage('all');
       setActiveTab('dashboard');
     }
   };
 
   // Derived filter options
   const filterOptions = React.useMemo(() => {
-    if (!data.length) return { years: [], months: [], hsCodes: [] };
+    if (!data.length) return { years: [], months: [], hsCodes: [], products: [], packages: [] };
     
     const years = Array.from(new Set(data.map(d => String(d.year)))).sort();
     const months = Array.from(new Set(data.map(d => String(d.month)))).sort((a, b) => Number(a) - Number(b));
     const hsCodes = Array.from(new Set(data.map(d => d.hsCode))).sort();
+    const products = Array.from(new Set(data.map(d => d.productName || 'Khác'))).sort();
+    const packages = Array.from(new Set(data.map(d => d.packageSpec || 'Theo mô tả'))).sort();
     
-    return { years, months, hsCodes };
+    return { years, months, hsCodes, products, packages };
   }, [data]);
 
   // Apply filters
@@ -58,9 +64,11 @@ export default function App() {
       const yearMatch = filterYear === 'all' || String(d.year) === filterYear;
       const monthMatch = filterMonth === 'all' || String(d.month) === filterMonth;
       const hsMatch = filterHsCode === 'all' || d.hsCode === filterHsCode;
-      return yearMatch && monthMatch && hsMatch;
+      const productMatch = filterProduct === 'all' || (d.productName || 'Khác') === filterProduct;
+      const packageMatch = filterPackage === 'all' || (d.packageSpec || 'Theo mô tả') === filterPackage;
+      return yearMatch && monthMatch && hsMatch && productMatch && packageMatch;
     });
-  }, [data, filterYear, filterMonth, filterHsCode]);
+  }, [data, filterYear, filterMonth, filterHsCode, filterProduct, filterPackage]);
 
   if (!isLoaded) return null;
 
@@ -86,6 +94,30 @@ export default function App() {
             <div className="flex items-center space-x-2 bg-slate-50 p-1 rounded-md border border-slate-200">
                <span className="text-[9px] font-bold uppercase text-slate-400 px-2 tracking-widest">Filters</span>
                
+              {/* Product Filter */}
+               <select 
+                className="text-[10px] font-semibold border-none px-2 py-1 bg-transparent text-slate-600 outline-none cursor-pointer hover:text-indigo-600 transition-colors max-w-[110px]"
+                value={filterProduct}
+                onChange={(e) => setFilterProduct(e.target.value)}
+               >
+                  <option value="all">SẢN PHẨM (ALL)</option>
+                  {filterOptions.products.map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+               </select>
+
+               {/* Package Filter */}
+               <select 
+                className="text-[10px] font-semibold border-none px-2 py-1 bg-transparent text-slate-600 outline-none cursor-pointer hover:text-indigo-600 transition-colors max-w-[110px]"
+                value={filterPackage}
+                onChange={(e) => setFilterPackage(e.target.value)}
+               >
+                  <option value="all">QUY CÁCH (ALL)</option>
+                  {filterOptions.packages.map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+               </select>
+
                {/* HS Code Filter */}
                <select 
                 className="text-[10px] font-semibold border-none px-2 py-1 bg-transparent text-slate-600 outline-none cursor-pointer hover:text-indigo-600 transition-colors max-w-[110px]"

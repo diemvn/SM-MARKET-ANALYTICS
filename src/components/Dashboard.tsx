@@ -119,6 +119,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     const companyMap = new Map<string, { base: CompanyStats, partners: Map<string, PartnerStats>, hsCodes: Map<string, PartnerStats> }>();
     const marketMap = new Map<string, { base: MarketStats, importers: Map<string, PartnerStats> }>();
     const hsCodeMap = new Map<string, number>();
+    const productMap = new Map<string, PartnerStats>();
+    const packageMap = new Map<string, PartnerStats>();
 
     data.forEach(item => {
       // (filtering comments)
@@ -192,6 +194,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       // HS Code aggregation
       const hsKey = item.hsCode;
       hsCodeMap.set(hsKey, (hsCodeMap.get(hsKey) || 0) + (item.valueUsd || 0));
+
+      // Product aggregation
+      const prodKey = item.productName || 'Khác';
+      let prodStat = productMap.get(prodKey);
+      if (!prodStat) {
+        prodStat = { name: prodKey, totalValueUsd: 0, totalQuantity: 0, shipmentCount: 0 };
+        productMap.set(prodKey, prodStat);
+      }
+      prodStat.totalValueUsd += item.valueUsd || 0;
+      prodStat.totalQuantity += item.quantity || 0;
+      prodStat.shipmentCount += 1;
+
+      // Packaging aggregation
+      const pkgKey = item.packageSpec || 'Theo mô tả';
+      let pkgStat = packageMap.get(pkgKey);
+      if (!pkgStat) {
+        pkgStat = { name: pkgKey, totalValueUsd: 0, totalQuantity: 0, shipmentCount: 0 };
+        packageMap.set(pkgKey, pkgStat);
+      }
+      pkgStat.totalValueUsd += item.valueUsd || 0;
+      pkgStat.totalQuantity += item.quantity || 0;
+      pkgStat.shipmentCount += 1;
     });
 
     const sortedCompanies = Array.from(companyMap.values())
@@ -217,6 +241,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
 
     const top10HsCodes = hsCodeData.slice(0, 10);
 
+    const sortedProducts = Array.from(productMap.values())
+      .sort((a, b) => b.totalValueUsd - a.totalValueUsd);
+
+    const sortedPackages = Array.from(packageMap.values())
+      .sort((a, b) => b.totalValueUsd - a.totalValueUsd);
+
     // Market Share Data (Pie Chart)
     const top5Markets = sortedMarkets.slice(0, 5);
     const otherMarketsValue = sortedMarkets.slice(5).reduce((sum, m) => sum + m.totalValueUsd, 0);
@@ -230,6 +260,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       totalShipments, 
       sortedCompanies, 
       sortedMarkets, 
+      sortedProducts,
+      sortedPackages,
       hsCodeData: top10HsCodes,
       marketShareData
     };
@@ -260,6 +292,61 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     }));
     const wsMark = XLSX.utils.json_to_sheet(marketData);
     XLSX.utils.book_append_sheet(wb, wsMark, "Xếp hạng Thị trường");
+
+    // Product Ranking Sheet
+    const productData = stats.sortedProducts.map(p => ({
+      'Tên Sản phẩm': p.name,
+      'Tổng trị giá USD': p.totalValueUsd,
+      'Tổng số lượng': p.totalQuantity,
+      'Số tờ khai': p.shipmentCount
+    }));
+    const wsProd = XLSX.utils.json_to_sheet(productData);
+    XLSX.utils.book_append_sheet(wb, wsProd, "Xếp hạng Sản phẩm");
+
+    // Packaging Ranking Sheet
+    const packageData = stats.sortedPackages.map(p => ({
+      'Quy cách đóng gói': p.name,
+      'Tổng trị giá USD': p.totalValueUsd,
+      'Tổng số lượng': p.totalQuantity,
+      'Số tờ khai': p.shipmentCount
+    }));
+    const wsPkg = XLSX.utils.json_to_sheet(packageData);
+    XLSX.utils.book_append_sheet(wb, wsPkg, "Xếp hạng Đóng gói");
+
+    // Detailed Data Sheet
+    const detailedData = data.map(item => ({
+      'Năm': item.year,
+      'Tháng': item.month,
+      'Ngày': item.day,
+      'MST Cty xuất khẩu': item.exporterTaxId,
+      'Tên Cty xuất khẩu': item.exporterName,
+      'Địa chỉ Cty xuất khẩu': item.exporterAddress,
+      'Điện thoại Cty xuất khẩu': item.exporterPhone,
+      'Tên Cty nhập khẩu': item.importerName,
+      'Địa chỉ Cty nhập khẩu': item.importerAddress,
+      'HS Code': item.hsCode,
+      'Tên sản phẩm': item.productName || 'Khác',
+      'Quy cách đóng gói': item.packageSpec || 'Theo mô tả',
+      'Mô tả hàng hóa': item.productDescription,
+      'Thuế xuất khẩu': item.exportTax,
+      'Xuất xứ': item.origin,
+      'Mã đơn vị tính giá': item.unit,
+      'Số lượng': item.quantity,
+      'Đơn giá nguyên tệ': item.priceForeign,
+      'Đơn giá USD': item.priceUsd,
+      'Trị giá USD': item.valueUsd,
+      'Tỷ giá VND': item.exchangeRateVnd,
+      'Mã đồng tiền': item.currency,
+      'Điều kiện giá': item.incoterms,
+      'Phương thức thanh toán': item.paymentMethod,
+      'Chi cục Hải quan': item.customsOffice,
+      'Tên loại hình': item.businessType,
+      'Tên nước xuất khẩu': item.exportCountry,
+      'Tên nước nhập khẩu': item.importCountry,
+      'Số tờ khai': item.declarationNumber
+    }));
+    const wsDetail = XLSX.utils.json_to_sheet(detailedData);
+    XLSX.utils.book_append_sheet(wb, wsDetail, "Chi tiết dữ liệu");
 
     XLSX.writeFile(wb, `Bao_cao_tong_hop_${new Date().getTime()}.xlsx`);
   };
@@ -370,6 +457,70 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                     children={market.importers}
                     isMarket
                   />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Top Products Drill-down */}
+        <div className="high-density-card flex flex-col !p-0">
+          <div className="pane-header p-3 border-b border-border-line bg-slate-50">
+            <h3 className="pane-title text-[11px] text-slate-900 uppercase">
+              XẾP HẠNG THEO TÊN SẢN PHẨM ({stats.sortedProducts.length})
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full dense-table">
+              <thead>
+                <tr className="bg-slate-50">
+                  <th className="w-1/2">SẢN PHẨM</th>
+                  <th className="text-right">SỐ LƯỢNG</th>
+                  <th className="text-right">TRỊ GIÁ USD</th>
+                  <th className="text-right">SỐ TỜ KHAI</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.sortedProducts.slice(0, 10).map((prod, i) => (
+                  <tr key={i} className="hover:bg-slate-50 transition-colors">
+                    <td className="font-semibold text-accent-blue uppercase text-[10px] pl-4">{prod.name}</td>
+                    <td className="text-right font-mono text-[11px]">{formatNumber(prod.totalQuantity)}</td>
+                    <td className="text-right font-mono text-[11px] text-accent-blue">{formatCurrency(prod.totalValueUsd)}</td>
+                    <td className="text-right font-mono text-[11px] text-slate-500">{formatNumber(prod.shipmentCount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Top Packaging Drill-down */}
+        <div className="high-density-card flex flex-col !p-0">
+          <div className="pane-header p-3 border-b border-border-line bg-slate-50">
+            <h3 className="pane-title text-[11px] text-slate-900 uppercase">
+              XẾP HẠNG THEO QUY CÁCH ĐÓNG GÓI ({stats.sortedPackages.length})
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full dense-table">
+              <thead>
+                <tr className="bg-slate-50">
+                  <th className="w-1/2">QUY CÁCH ĐÓNG GÓI</th>
+                  <th className="text-right">SỐ LƯỢNG</th>
+                  <th className="text-right">TRỊ GIÁ USD</th>
+                  <th className="text-right">SỐ TỜ KHAI</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.sortedPackages.slice(0, 10).map((pkg, i) => (
+                  <tr key={i} className="hover:bg-slate-50 transition-colors">
+                    <td className="font-semibold text-slate-700 text-[10px] pl-4">{pkg.name}</td>
+                    <td className="text-right font-mono text-[11px]">{formatNumber(pkg.totalQuantity)}</td>
+                    <td className="text-right font-mono text-[11px] text-accent-blue">{formatCurrency(pkg.totalValueUsd)}</td>
+                    <td className="text-right font-mono text-[11px] text-slate-500">{formatNumber(pkg.shipmentCount)}</td>
+                  </tr>
                 ))}
               </tbody>
             </table>

@@ -26,6 +26,8 @@ export interface ExportData {
   exportCountry: string;
   importCountry: string;
   declarationNumber: string;
+  productName?: string;
+  packageSpec?: string;
 }
 
 export interface PartnerStats {

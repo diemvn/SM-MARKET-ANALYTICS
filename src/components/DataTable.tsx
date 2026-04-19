@@ -16,25 +16,43 @@ export const DataTable: React.FC<DataTableProps> = ({ data }) => {
       item.exporterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.importCountry.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.hsCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.declarationNumber.toLowerCase().includes(searchTerm.toLowerCase())
+      item.declarationNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.packageSpec?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [data, searchTerm]);
 
   const handleExport = () => {
     const exportData = filteredData.map(item => ({
-      'Ngày': `${item.day}/${item.month}/${item.year}`,
-      'Số Tờ Khai': item.declarationNumber,
-      'MST Xuất Khẩu': item.exporterTaxId,
-      'Công ty Xuất Khẩu': item.exporterName,
-      'Thị trường': item.importCountry,
-      'Nhà Nhập Khẩu': item.importerName,
-      'Mã HS': item.hsCode,
+      'Năm': item.year,
+      'Tháng': item.month,
+      'Ngày': item.day,
+      'MST Cty xuất khẩu': item.exporterTaxId,
+      'Tên Cty xuất khẩu': item.exporterName,
+      'Địa chỉ Cty xuất khẩu': item.exporterAddress,
+      'Điện thoại Cty xuất khẩu': item.exporterPhone,
+      'Tên Cty nhập khẩu': item.importerName,
+      'Địa chỉ Cty nhập khẩu': item.importerAddress,
+      'HS Code': item.hsCode,
+      'Tên sản phẩm': item.productName || 'Khác',
+      'Quy cách đóng gói': item.packageSpec || 'Theo mô tả',
       'Mô tả hàng hóa': item.productDescription,
+      'Thuế xuất khẩu': item.exportTax,
+      'Xuất xứ': item.origin,
+      'Mã đơn vị tính giá': item.unit,
       'Số lượng': item.quantity,
-      'Đơn vị': item.unit,
+      'Đơn giá nguyên tệ': item.priceForeign,
+      'Đơn giá USD': item.priceUsd,
       'Trị giá USD': item.valueUsd,
-      'Loại hình': item.businessType,
-      'Cửa khẩu': item.customsOffice
+      'Tỷ giá VND': item.exchangeRateVnd,
+      'Mã đồng tiền': item.currency,
+      'Điều kiện giá': item.incoterms,
+      'Phương thức thanh toán': item.paymentMethod,
+      'Chi cục Hải quan': item.customsOffice,
+      'Tên loại hình': item.businessType,
+      'Tên nước xuất khẩu': item.exportCountry,
+      'Tên nước nhập khẩu': item.importCountry,
+      'Số tờ khai': item.declarationNumber
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -78,6 +96,8 @@ export const DataTable: React.FC<DataTableProps> = ({ data }) => {
               <th>Ngày</th>
               <th>Số Tờ Khai</th>
               <th>Cty Xuất Khẩu</th>
+              <th>Sản phẩm</th>
+              <th>Quy cách</th>
               <th>Thị trường</th>
               <th>HS Code</th>
               <th>Mô tả hàng hóa</th>
@@ -94,6 +114,14 @@ export const DataTable: React.FC<DataTableProps> = ({ data }) => {
                 <td>
                   <div className="font-bold text-ink truncate max-w-[180px]" title={item.exporterName}>{item.exporterName}</div>
                   <div className="text-[9px] text-subtle-gray font-mono">{item.exporterTaxId}</div>
+                </td>
+                <td className="font-medium">
+                  <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-[9px] uppercase tracking-wide">
+                    {item.productName || 'Khác'}
+                  </span>
+                </td>
+                <td className="text-[10px] text-slate-500 font-mono italic">
+                  {item.packageSpec || 'N/A'}
                 </td>
                 <td>{item.importCountry}</td>
                 <td className="font-mono text-accent-blue">{item.hsCode}</td>
