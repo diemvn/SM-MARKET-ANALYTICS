@@ -45,6 +45,8 @@ export interface CompanyStats {
   shipmentCount: number;
   partners: PartnerStats[];
   topHsCodes: PartnerStats[];
+  topProducts?: PartnerStats[];
+  topPackages?: PartnerStats[];
   markets: Set<string>;
 }
 
@@ -55,4 +57,6 @@ export interface MarketStats {
   shipmentCount: number;
   importers: PartnerStats[];
   exporters: Set<string>;
+  topProducts?: PartnerStats[];
+  topPackages?: PartnerStats[];
 }

@@ -21,8 +21,10 @@ const CollapsibleRow: React.FC<{
   shipmentCount: number;
   children: PartnerStats[];
   topHsCodes?: PartnerStats[];
-  isMarket?: boolean;
-}> = ({ title, subtitle, quantity, valueUsd, shipmentCount, children, topHsCodes, isMarket }) => {
+  topProducts?: PartnerStats[];
+  topPackages?: PartnerStats[];
+  childLabel?: string;
+}> = ({ title, subtitle, quantity, valueUsd, shipmentCount, children, topHsCodes, topProducts, topPackages, childLabel }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -54,14 +56,14 @@ const CollapsibleRow: React.FC<{
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden p-3 space-y-3"
               >
-                {/* Secondary Table: Markets/Partners */}
+                {/* Secondary Table: Markets/Partners/Exporters */}
                 <div className="space-y-1">
                   <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-4">
-                    {isMarket ? `CÁC NHÀ NHẬP KHẨU CHÍNH (${children.length})` : `CÁC THỊ TRƯỜNG CHÍNH (${children.length})`}
+                    {childLabel || `DANH SÁCH CHI TIẾT`} ({children.length})
                   </h4>
                   <table className="w-full dense-table ml-4 w-[calc(100%-1rem)]">
                     <tbody className="bg-white">
-                      {children.map((child, idx) => (
+                      {children.slice(0, 20).map((child, idx) => (
                         <tr key={idx} className="hover:bg-slate-50 transition-colors">
                           <td className="text-[10px] text-slate-700 pl-4">{child.name}</td>
                           <td className="text-right text-[10px] font-mono text-slate-500">{formatNumber(child.totalQuantity)}</td>
@@ -73,8 +75,50 @@ const CollapsibleRow: React.FC<{
                   </table>
                 </div>
 
-                {/* New Section: Top HS Codes per Company */}
-                {!isMarket && topHsCodes && topHsCodes.length > 0 && (
+                {/* Section: Top Products per Company */}
+                {topProducts && topProducts.length > 0 && (
+                  <div className="space-y-1">
+                    <h4 className="text-[9px] font-bold text-accent-blue uppercase tracking-widest px-4">
+                      TOP 5 SẢN PHẨM PHỔ BIẾN
+                    </h4>
+                    <table className="w-full dense-table ml-4 w-[calc(100%-1rem)]">
+                      <tbody className="bg-white">
+                        {topProducts.map((prod, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                            <td className="text-[10px] text-slate-700 pl-4">{prod.name}</td>
+                            <td className="text-right text-[10px] font-mono text-slate-500">{formatNumber(prod.totalQuantity)}</td>
+                            <td className="text-right text-[10px] font-mono text-slate-500">{formatCurrency(prod.totalValueUsd)}</td>
+                            <td className="text-right text-[10px] font-mono text-slate-400">{formatNumber(prod.shipmentCount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Section: Top Packages per Company */}
+                {topPackages && topPackages.length > 0 && (
+                  <div className="space-y-1">
+                    <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-4">
+                      QUY CÁCH ĐÓNG GÓI CHÍNH
+                    </h4>
+                    <table className="w-full dense-table ml-4 w-[calc(100%-1rem)]">
+                      <tbody className="bg-white">
+                        {topPackages.map((pkg, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                            <td className="text-[10px] text-slate-700 pl-4">{pkg.name}</td>
+                            <td className="text-right text-[10px] font-mono text-slate-500">{formatNumber(pkg.totalQuantity)}</td>
+                            <td className="text-right text-[10px] font-mono text-slate-500">{formatCurrency(pkg.totalValueUsd)}</td>
+                            <td className="text-right text-[10px] font-mono text-slate-400">{formatNumber(pkg.shipmentCount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Section: Top HS Codes per Company */}
+                {topHsCodes && topHsCodes.length > 0 && (
                   <div className="space-y-1">
                     <h4 className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest px-4">
                       TOP 5 MẶT HÀNG (HS CODE) - TỔNG {topHsCodes.length} LOẠI
@@ -153,11 +197,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     const totalShipments = data.length;
     
     // Aggregation logic
-    const companyMap = new Map<string, { base: CompanyStats, partners: Map<string, PartnerStats>, hsCodes: Map<string, PartnerStats> }>();
-    const marketMap = new Map<string, { base: MarketStats, importers: Map<string, PartnerStats> }>();
+    const companyMap = new Map<string, { 
+      base: CompanyStats, 
+      partners: Map<string, PartnerStats>, 
+      hsCodes: Map<string, PartnerStats>,
+      products: Map<string, PartnerStats>,
+      packages: Map<string, PartnerStats>
+    }>();
+    const marketMap = new Map<string, { 
+      base: MarketStats, 
+      importers: Map<string, PartnerStats>,
+      products: Map<string, PartnerStats>,
+      packages: Map<string, PartnerStats>
+    }>();
     const hsCodeMap = new Map<string, number>();
-    const productMap = new Map<string, PartnerStats>();
-    const packageMap = new Map<string, PartnerStats>();
+    const productMap = new Map<string, { stats: PartnerStats, exporters: Map<string, PartnerStats> }>();
+    const packageMap = new Map<string, { stats: PartnerStats, exporters: Map<string, PartnerStats> }>();
 
     data.forEach(item => {
       // (filtering comments)
@@ -172,7 +227,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
         comp = {
           base: { name: item.exporterName, taxId: item.exporterTaxId, totalValueUsd: 0, totalQuantity: 0, shipmentCount: 0, partners: [], topHsCodes: [], markets: new Set<string>() },
           partners: new Map(), // Markets for company
-          hsCodes: new Map()   // HS Codes for company
+          hsCodes: new Map(),  // HS Codes for company
+          products: new Map(), // Products for company
+          packages: new Map()  // Packages for company
         };
         companyMap.set(companyKey, comp);
       }
@@ -203,13 +260,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       companyHsStat.totalQuantity += item.quantity || 0;
       companyHsStat.shipmentCount += 1;
 
+      // Aggregate Products for this company
+      const companyProdKey = item.productName || 'Khác';
+      let companyProdStat = comp.products.get(companyProdKey);
+      if (!companyProdStat) {
+        companyProdStat = { name: companyProdKey, totalValueUsd: 0, totalQuantity: 0, shipmentCount: 0 };
+        comp.products.set(companyProdKey, companyProdStat);
+      }
+      companyProdStat.totalValueUsd += item.valueUsd || 0;
+      companyProdStat.totalQuantity += item.quantity || 0;
+      companyProdStat.shipmentCount += 1;
+
+      // Aggregate Packages for this company
+      const companyPkgKey = item.packageSpec || 'Theo mô tả';
+      let companyPkgStat = comp.packages.get(companyPkgKey);
+      if (!companyPkgStat) {
+        companyPkgStat = { name: companyPkgKey, totalValueUsd: 0, totalQuantity: 0, shipmentCount: 0 };
+        comp.packages.set(companyPkgKey, companyPkgStat);
+      }
+      companyPkgStat.totalValueUsd += item.valueUsd || 0;
+      companyPkgStat.totalQuantity += item.quantity || 0;
+      companyPkgStat.shipmentCount += 1;
+
       // Market aggregation (Global)
       const marketKey = item.importCountry;
       let mark = marketMap.get(marketKey);
       if (!mark) {
         mark = {
           base: { country: item.importCountry, totalValueUsd: 0, totalQuantity: 0, shipmentCount: 0, importers: [], exporters: new Set<string>() },
-          importers: new Map()
+          importers: new Map(),
+          products: new Map(),
+          packages: new Map()
         };
         marketMap.set(marketKey, mark);
       }
@@ -228,38 +309,88 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       mPart.totalQuantity += item.quantity || 0;
       mPart.shipmentCount += 1;
 
+      // Aggregate Products for this market
+      const marketProdKey = item.productName || 'Khác';
+      let marketProdStat = mark.products.get(marketProdKey);
+      if (!marketProdStat) {
+        marketProdStat = { name: marketProdKey, totalValueUsd: 0, totalQuantity: 0, shipmentCount: 0 };
+        mark.products.set(marketProdKey, marketProdStat);
+      }
+      marketProdStat.totalValueUsd += item.valueUsd || 0;
+      marketProdStat.totalQuantity += item.quantity || 0;
+      marketProdStat.shipmentCount += 1;
+
+      // Aggregate Packages for this market
+      const marketPkgKey = item.packageSpec || 'Theo mô tả';
+      let marketPkgStat = mark.packages.get(marketPkgKey);
+      if (!marketPkgStat) {
+        marketPkgStat = { name: marketPkgKey, totalValueUsd: 0, totalQuantity: 0, shipmentCount: 0 };
+        mark.packages.set(marketPkgKey, marketPkgStat);
+      }
+      marketPkgStat.totalValueUsd += item.valueUsd || 0;
+      marketPkgStat.totalQuantity += item.quantity || 0;
+      marketPkgStat.shipmentCount += 1;
+
       // HS Code aggregation
       const hsKey = item.hsCode;
       hsCodeMap.set(hsKey, (hsCodeMap.get(hsKey) || 0) + (item.valueUsd || 0));
 
       // Product aggregation
       const prodKey = item.productName || 'Khác';
-      let prodStat = productMap.get(prodKey);
-      if (!prodStat) {
-        prodStat = { name: prodKey, totalValueUsd: 0, totalQuantity: 0, shipmentCount: 0 };
-        productMap.set(prodKey, prodStat);
+      let prodEntry = productMap.get(prodKey);
+      if (!prodEntry) {
+        prodEntry = { 
+          stats: { name: prodKey, totalValueUsd: 0, totalQuantity: 0, shipmentCount: 0 },
+          exporters: new Map()
+        };
+        productMap.set(prodKey, prodEntry);
       }
-      prodStat.totalValueUsd += item.valueUsd || 0;
-      prodStat.totalQuantity += item.quantity || 0;
-      prodStat.shipmentCount += 1;
+      prodEntry.stats.totalValueUsd += item.valueUsd || 0;
+      prodEntry.stats.totalQuantity += item.quantity || 0;
+      prodEntry.stats.shipmentCount += 1;
+
+      const pExpKey = item.exporterName;
+      let pExpStat = prodEntry.exporters.get(pExpKey);
+      if (!pExpStat) {
+        pExpStat = { name: item.exporterName, totalValueUsd: 0, totalQuantity: 0, shipmentCount: 0 };
+        prodEntry.exporters.set(pExpKey, pExpStat);
+      }
+      pExpStat.totalValueUsd += item.valueUsd || 0;
+      pExpStat.totalQuantity += item.quantity || 0;
+      pExpStat.shipmentCount += 1;
 
       // Packaging aggregation
       const pkgKey = item.packageSpec || 'Theo mô tả';
-      let pkgStat = packageMap.get(pkgKey);
-      if (!pkgStat) {
-        pkgStat = { name: pkgKey, totalValueUsd: 0, totalQuantity: 0, shipmentCount: 0 };
-        packageMap.set(pkgKey, pkgStat);
+      let pkgEntry = packageMap.get(pkgKey);
+      if (!pkgEntry) {
+        pkgEntry = { 
+          stats: { name: pkgKey, totalValueUsd: 0, totalQuantity: 0, shipmentCount: 0 },
+          exporters: new Map()
+        };
+        packageMap.set(pkgKey, pkgEntry);
       }
-      pkgStat.totalValueUsd += item.valueUsd || 0;
-      pkgStat.totalQuantity += item.quantity || 0;
-      pkgStat.shipmentCount += 1;
+      pkgEntry.stats.totalValueUsd += item.valueUsd || 0;
+      pkgEntry.stats.totalQuantity += item.quantity || 0;
+      pkgEntry.stats.shipmentCount += 1;
+
+      const pkgExpKey = item.exporterName;
+      let pkgExpStat = pkgEntry.exporters.get(pkgExpKey);
+      if (!pkgExpStat) {
+        pkgExpStat = { name: item.exporterName, totalValueUsd: 0, totalQuantity: 0, shipmentCount: 0 };
+        pkgEntry.exporters.set(pkgExpKey, pkgExpStat);
+      }
+      pkgExpStat.totalValueUsd += item.valueUsd || 0;
+      pkgExpStat.totalQuantity += item.quantity || 0;
+      pkgExpStat.shipmentCount += 1;
     });
 
     const sortedCompanies = Array.from(companyMap.values())
       .map(c => ({
         ...c.base,
         partners: Array.from(c.partners.values()).sort((a, b) => b.totalValueUsd - a.totalValueUsd),
-        topHsCodes: Array.from(c.hsCodes.values()).sort((a, b) => b.totalValueUsd - a.totalValueUsd).slice(0, 5)
+        topHsCodes: Array.from(c.hsCodes.values()).sort((a, b) => b.totalValueUsd - a.totalValueUsd).slice(0, 5),
+        topProducts: Array.from(c.products.values()).sort((a, b) => b.totalValueUsd - a.totalValueUsd).slice(0, 5),
+        topPackages: Array.from(c.packages.values()).sort((a, b) => b.totalValueUsd - a.totalValueUsd).slice(0, 5)
       }))
       .filter(c => !companySearch || c.name.toLowerCase().includes(companySearch.toLowerCase()) || c.taxId.includes(companySearch))
       .sort((a, b) => b.totalValueUsd - a.totalValueUsd);
@@ -267,7 +398,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     const sortedMarkets = Array.from(marketMap.values())
       .map(m => ({
         ...m.base,
-        importers: Array.from(m.importers.values()).sort((a, b) => b.totalValueUsd - a.totalValueUsd)
+        importers: Array.from(m.importers.values()).sort((a, b) => b.totalValueUsd - a.totalValueUsd),
+        topProducts: Array.from(m.products.values()).sort((a, b) => b.totalValueUsd - a.totalValueUsd).slice(0, 5),
+        topPackages: Array.from(m.packages.values()).sort((a, b) => b.totalValueUsd - a.totalValueUsd).slice(0, 5)
       }))
       .filter(m => !marketSearch || m.country.toLowerCase().includes(marketSearch.toLowerCase()))
       .sort((a, b) => b.totalValueUsd - a.totalValueUsd);
@@ -279,9 +412,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     const top10HsCodes = hsCodeData.slice(0, 10);
 
     const sortedProducts = Array.from(productMap.values())
+      .map(p => ({
+        ...p.stats,
+        exporters: Array.from(p.exporters.values()).sort((a, b) => b.totalValueUsd - a.totalValueUsd)
+      }))
       .sort((a, b) => b.totalValueUsd - a.totalValueUsd);
 
     const sortedPackages = Array.from(packageMap.values())
+      .map(p => ({
+        ...p.stats,
+        exporters: Array.from(p.exporters.values()).sort((a, b) => b.totalValueUsd - a.totalValueUsd)
+      }))
       .sort((a, b) => b.totalValueUsd - a.totalValueUsd);
 
     // Market Share Data (Pie Chart)
@@ -485,6 +626,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                     shipmentCount={company.shipmentCount}
                     children={company.partners}
                     topHsCodes={company.topHsCodes}
+                    topProducts={company.topProducts}
+                    topPackages={company.topPackages}
+                    childLabel="CÁC THỊ TRƯỜNG CHÍNH"
                   />
                 ))}
               </tbody>
@@ -527,7 +671,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                     valueUsd={market.totalValueUsd}
                     shipmentCount={market.shipmentCount}
                     children={market.importers}
-                    isMarket
+                    topProducts={market.topProducts}
+                    topPackages={market.topPackages}
+                    childLabel="CÁC NHÀ NHẬP KHẨU CHÍNH"
                   />
                 ))}
               </tbody>
@@ -556,12 +702,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
               </thead>
               <tbody>
                 {stats.sortedProducts.slice(0, 10).map((prod, i) => (
-                  <tr key={i} className="hover:bg-slate-50 transition-colors">
-                    <td className="font-semibold text-accent-blue uppercase text-[10px] pl-4">{prod.name}</td>
-                    <td className="text-right font-mono text-[11px]">{formatNumber(prod.totalQuantity)}</td>
-                    <td className="text-right font-mono text-[11px] text-accent-blue">{formatCurrency(prod.totalValueUsd)}</td>
-                    <td className="text-right font-mono text-[11px] text-slate-500">{formatNumber(prod.shipmentCount)}</td>
-                  </tr>
+                  <CollapsibleRow 
+                    key={i}
+                    title={prod.name}
+                    quantity={prod.totalQuantity}
+                    valueUsd={prod.totalValueUsd}
+                    shipmentCount={prod.shipmentCount}
+                    children={prod.exporters}
+                    childLabel="CÁC CÔNG TY XUẤT KHẨU"
+                  />
                 ))}
               </tbody>
             </table>
@@ -587,12 +736,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
               </thead>
               <tbody>
                 {stats.sortedPackages.slice(0, 10).map((pkg, i) => (
-                  <tr key={i} className="hover:bg-slate-50 transition-colors">
-                    <td className="font-semibold text-slate-700 text-[10px] pl-4">{pkg.name}</td>
-                    <td className="text-right font-mono text-[11px]">{formatNumber(pkg.totalQuantity)}</td>
-                    <td className="text-right font-mono text-[11px] text-accent-blue">{formatCurrency(pkg.totalValueUsd)}</td>
-                    <td className="text-right font-mono text-[11px] text-slate-500">{formatNumber(pkg.shipmentCount)}</td>
-                  </tr>
+                  <CollapsibleRow 
+                    key={i}
+                    title={pkg.name}
+                    quantity={pkg.totalQuantity}
+                    valueUsd={pkg.totalValueUsd}
+                    shipmentCount={pkg.shipmentCount}
+                    children={pkg.exporters}
+                    childLabel="CÁC CÔNG TY XUẤT KHẨU"
+                  />
                 ))}
               </tbody>
             </table>
