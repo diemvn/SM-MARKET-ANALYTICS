@@ -20,8 +20,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onRes
   return (
     <aside className="w-[240px] bg-slate-900 text-white flex flex-col h-screen sticky top-0 border-r border-slate-800">
       <div className="sidebar-header p-6 border-b border-slate-800">
-        <h1 className="text-[13px] font-bold uppercase tracking-[3px] text-white/90">Market Analyzer</h1>
-        <p className="text-[9px] text-slate-500 mt-1 uppercase tracking-widest">Enterprise Edition</p>
+        <h1 className="text-[13px] font-bold uppercase tracking-[2px] text-white/90">Helen Thai</h1>
+        <p className="text-[9px] text-slate-500 mt-1 uppercase tracking-widest">Market Insight</p>
       </div>
 
       <div className="p-3">

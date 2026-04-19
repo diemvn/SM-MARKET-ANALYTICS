@@ -107,6 +107,43 @@ const CHART_COLORS = [
   '#10b981', '#06b6d4', '#14b8a6', '#3b82f6', '#4f46e5'
 ];
 
+const DonutCard: React.FC<{ title: string; data: any[] }> = ({ title, data }) => (
+  <div className="high-density-card !p-6">
+    <h3 className="pane-title mb-6 border-b border-border-line pb-2 font-bold text-slate-900 uppercase tracking-tight">{title}</h3>
+    <div className="h-[280px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={90}
+            paddingAngle={5}
+            dataKey="value"
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip 
+            contentStyle={{ fontSize: '11px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+            formatter={(val: number) => [formatCurrency(val), 'Trị giá']}
+          />
+          <Legend 
+            verticalAlign="bottom" 
+            height={60} 
+            iconType="circle" 
+            wrapperStyle={{ fontSize: '9px', paddingTop: '10px' }}
+            layout="horizontal"
+            align="center"
+          />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  </div>
+);
+
 export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   const [companySearch, setCompanySearch] = useState('');
   const [marketSearch, setMarketSearch] = useState('');
@@ -253,7 +290,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     const marketShareData = [
       ...top5Markets.map(m => ({ name: m.country, value: m.totalValueUsd })),
       { name: 'Khác', value: otherMarketsValue }
-    ];
+    ].filter(d => d.value > 0);
+
+    // Company Share Data
+    const top5CompaniesChart = sortedCompanies.slice(0, 5);
+    const otherCompaniesValue = sortedCompanies.slice(5).reduce((sum, c) => sum + c.totalValueUsd, 0);
+    const companyShareData = [
+      ...top5CompaniesChart.map(c => ({ name: c.name, value: c.totalValueUsd })),
+      { name: 'Khác', value: otherCompaniesValue }
+    ].filter(d => d.value > 0);
+
+    // Product Share Data
+    const top5ProductsChart = sortedProducts.slice(0, 5);
+    const otherProductsValue = sortedProducts.slice(5).reduce((sum, p) => sum + p.totalValueUsd, 0);
+    const productShareData = [
+      ...top5ProductsChart.map(p => ({ name: p.name, value: p.totalValueUsd })),
+      { name: 'Khác', value: otherProductsValue }
+    ].filter(d => d.value > 0);
+
+    // Package Share Data
+    const top5PackagesChart = sortedPackages.slice(0, 5);
+    const otherPackagesValue = sortedPackages.slice(5).reduce((sum, p) => sum + p.totalValueUsd, 0);
+    const packageShareData = [
+      ...top5PackagesChart.map(p => ({ name: p.name, value: p.totalValueUsd })),
+      { name: 'Khác', value: otherPackagesValue }
+    ].filter(d => d.value > 0);
 
     return { 
       totalValue, 
@@ -263,7 +324,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       sortedProducts,
       sortedPackages,
       hsCodeData: top10HsCodes,
-      marketShareData
+      marketShareData,
+      companyShareData,
+      productShareData,
+      packageShareData
     };
   }, [data, companySearch, marketSearch]);
 
@@ -373,6 +437,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
           <Download className="w-5 h-5" />
           <span>XUẤT BÁO CÁO TỔNG HỢP</span>
         </button>
+      </div>
+
+      {/* Distribution Charts Grid - TOP SECTION */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <DonutCard title="PHÂN BỔ CÔNG TY XUẤT KHẨU" data={stats.companyShareData} />
+        <DonutCard title="PHÂN BỔ THỊ TRƯỜNG NHẬP KHẨU" data={stats.marketShareData} />
+        <DonutCard title="PHÂN BỔ THEO SẢN PHẨM" data={stats.productShareData} />
+        <DonutCard title="PHÂN BỔ THEO QUY CÁCH ĐÓNG GÓI" data={stats.packageShareData} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -524,76 +596,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Analytics Charts - Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Market Share Donut Chart */}
-        <div className="high-density-card !p-6">
-          <h3 className="pane-title mb-6 border-b border-border-line pb-2 font-bold text-slate-900 uppercase tracking-tight">PHÂN BỔ THỊ TRƯỜNG NHẬP KHẨU</h3>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={stats.marketShareData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {stats.marketShareData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ fontSize: '11px', borderRadius: '8px', border: 'none' }}
-                  formatter={(val: number) => [formatCurrency(val), 'Trị giá']}
-                />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="high-density-card !p-6">
-          <h3 className="pane-title mb-6 border-b border-border-line pb-2 font-bold text-slate-900 uppercase tracking-tight">TOP 10 MÃ HS CODE THEO TRỊ GIÁ</h3>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.hsCodeData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cfcfcf" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={{ stroke: '#cfcfcf' }} 
-                  tickLine={false} 
-                  tick={{ fontSize: 9, fill: '#1a1a1a' }}
-                />
-                <YAxis 
-                  axisLine={{ stroke: '#cfcfcf' }} 
-                  tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#1a1a1a' }}
-                  tickFormatter={(val) => `$${(val / 1000000).toFixed(0)}M`}
-                />
-                <Tooltip 
-                  contentStyle={{ fontSize: '11px', border: '1px solid #cfcfcf', backgroundColor: '#fff' }}
-                  formatter={(val: number) => [formatCurrency(val), 'Trị giá']}
-                  cursor={{ fill: '#f5f5f5' }}
-                />
-                <Bar 
-                  dataKey="value" 
-                  fill="#6366f1" 
-                  radius={[4, 4, 0, 0]}
-                  barSize={30}
-                >
-                  {stats.hsCodeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
           </div>
         </div>
       </div>
